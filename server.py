@@ -20,7 +20,7 @@ while True:
     #  Do some 'work'
     time.sleep(1)
 
-    summary = main('Periapical Status Related to the Quality of Coronal.pdf')
+    summary = main('Conformer.pdf')
 
     #  Send reply back to client
     socket.send_string(summary)
