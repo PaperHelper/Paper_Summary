@@ -13,20 +13,41 @@ def download(url, file_name):
 
 if __name__ == '__main__':
 
-    driver = webdriver.Chrome('/Users/shinnahyun/Desktop/chromedriver')
-    driver.implicitly_wait(3)
-    URL = f"https://arxiv.org/list/cs.DB/recent"
-    driver.get(URL)
-    html = driver.page_source
+    pubs = {
+            'cs.ai': ['nips','ieee','eccv','cvpr','iccv','aaai','icml','aamas','cibb','ecai','ecml pkdd','iclr','ijcai','iswc','neurlps','elsevier'],
+            'cs.db': ['sigkdd','sigmod','cikm','acm','ieee','elsevier','cidr','ecir','ecis','icdt','icis','iswc',,'jcdl','kdd','pods','sigir','vldb'],
+            'cs.os': ['atc','usenix','acm','middleware','sosp','systor'],
+            'cs.dc': ['acm','disc','dsn','ieee','debs','icdcs','icpads','ipdps','podc','ppopp','sirocco','spaa','srds','hipc','sc','elsevier']
+            
+            }
+    fields = ['cs.ai']
+
+    # driver = webdriver.Chrome('./chromedriver')
+    # driver.implicitly_wait(3)
+    URL = f"https://arxiv.org/search/advanced"
+    param = {
+            'advanced' : '',
+            'classification-computer_science' : 'y',
+            'date-date_type' : 'submitted_date',
+            'abstracts' : 'show',
+            'size' : '50',
+            'order' : '-announced_date_first'
+            }
+
+    cnt = 0
+    for i, field in enumerate(fields):
+        for pub in pubs[i]:
+            param[f'terms-{cnt}-operator'] = 'AND' if cnt==0 else 'OR'
+            param[f'terms-{cnt}-term'] = field+' '+pub
+            param[f'terms-{cnt}-field'] = 'all'
+            cnt += 1
+
+    response = requests.get(URL,params=param)
+    print(response)
+    print(response.url)
+    print(response.status_code)
+    # html = driver.page_source
     res = requests.get(URL)
     soup = BeautifulSoup(html, 'html.parser')
 
-    all_nums = soup.find_all('a', {"title": "Download PDF"})
-
-    #print(all_nums)
-    for a in all_nums:
-        href = a.attrs['href']
-        print(href)
-        url = "https://arxiv.org{}.pdf".format(href)
-        href = href.replace('/pdf/', '')
-        download(url,"{}.pdf".format(href))
+    
