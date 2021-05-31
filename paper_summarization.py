@@ -34,13 +34,8 @@ logger.setLevel(logging.INFO)
 stream_handler = logging.StreamHandler()
 logger.addHandler(stream_handler)
 
-# %load_ext google.colab.data_table
 
-logger.info("Initializing Summarizer & Tokenizer ...")
-# max seq length for this model = 1024
-summarizer = pipeline(task="summarization", model="facebook/bart-large-cnn")
-tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
-logger.info("Done Initializing!")
+# %load_ext google.colab.data_table
 
 def pdf_to_text(filename):
   output_string = StringIO()
@@ -60,17 +55,25 @@ def preprocess_text(filename):
   print('paper wordcount:',len(text))
   original_text_length = len(text)
 
-  text = text.partition('Introduction')[2]
+  if 'Introduction' in text:
+    text = text.partition('Introduction')[2]
+  elif 'INTRODUCTION' in text:
+    text = text.partition('INTRODUCTION')[2]
   if 'Acknowledgements' in text:
     text = text.partition('Acknowledgements')[0].strip()
-  else:
+  elif 'ACKNOWLEDGEMENTS' in text:
+    text = text.partition('ACKNOWLEDGEMENTS')[0].strip()
+  if 'References' in text:
     text = text.partition('References')[0].strip()
+  elif 'REFERENCES' in text:
+    text = text.partition('REFERENCES')[0].strip()
   # print(text)
   text = re.sub('ﬀ','ff',text)
   text = re.sub('[(].+[)]','',text)
   text = re.sub('\[[^a-zA-Z]+\]','',text)
   text = re.sub('-\n','',text)
   text = re.sub('\n',' ',text)
+  text = re.sub('\d+\.\s','',text)
   paragraphs = re.split('\s{2,}',text)
   """for p in paragraphs:
     print(p+'\n')"""
@@ -95,7 +98,7 @@ def preprocess_text(filename):
 
   return new_paragraphs, original_text_length
 
-def generate_chunks(new_paragraphs):
+def generate_chunks(new_paragraphs,tokenizer):
   flag = False
   large_paragraph = ""
   modified_paragraphs = []
@@ -126,26 +129,48 @@ def generate_chunks(new_paragraphs):
       flag = True
   return modified_paragraphs
 
-def generate_summarization(modified_paragraphs):
+def generate_summarization(modified_paragraphs,summarizer):
   summarization = []
 
   for paragraph in tqdm(modified_paragraphs):
       summarized = summarizer(paragraph)
       summarization.append(summarized[0]['summary_text'])
 
-  return '\n'.join(summarization)
+  return summarization
 
 def main(filename):
+
+  logger.info("Initializing Summarizer & Tokenizer ...")
+  # max seq length for this model = 1024
+  summarizer = pipeline(task="summarization", model="facebook/bart-large-cnn")
+  tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+  logger.info("Done Initializing!")
+
   logger.info("Preprocessing Paper ...")
   paragraphs,original_text_length = preprocess_text(filename)
   # print(paragraphs)
+
   logger.info("Generating Chunks ...")
-  chunks = generate_chunks(paragraphs)
+  chunks = generate_chunks(paragraphs,tokenizer)
+
   logger.info("Generating Summarization ...")
-  summary = generate_summarization(chunks)
+  summary = generate_summarization(chunks,summarizer)
+
+  summary = '\n'.join(summary)
   print(summary)
   print("summary word count:",len(summary))
+
+  with open(f'{filename[:-4]}.txt','w',encoding='utf-8') as f:
+      f.write(summary)
 
   return_summary = f'paper word count: {original_text_length}\n\n{summary}\n\nsummary word count: {len(summary)}'
   return return_summary
 
+
+if __name__ == '__main__':
+    import os
+    
+    files = [f for f in os.listdir() if f.endswith('.pdf')]
+    
+    for f in files:
+        main(f)
