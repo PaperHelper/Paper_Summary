@@ -29,6 +29,9 @@ nltk.download('punkt')
 import logging
 from tqdm import tqdm
 
+import json
+import os
+
 logger = logging.getLogger("PaperSummary")
 logger.setLevel(logging.INFO)
 stream_handler = logging.StreamHandler()
@@ -138,37 +141,47 @@ def generate_summarization(modified_paragraphs,summarizer):
 
   return summarization
 
-def main(filename):
-
+def main(papers):
+  files = [f'./data/{p}.pdf' for p in papers]
+  
   logger.info("Initializing Summarizer & Tokenizer ...")
   # max seq length for this model = 1024
   summarizer = pipeline(task="summarization", model="facebook/bart-large-cnn")
   tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
   logger.info("Done Initializing!")
 
-  logger.info("Preprocessing Paper ...")
-  paragraphs,original_text_length = preprocess_text(filename)
-  # print(paragraphs)
+  with open('./mapper.json','r') as f:
+    mapper = json.load(f)
 
-  logger.info("Generating Chunks ...")
-  chunks = generate_chunks(paragraphs,tokenizer)
+  summary_data = dict()
+  if os.path.exists('./summary_data_ready.json'):
+    with open('./summary_data_ready.json') as f:
+        summary_data = json.load(f)
 
-  logger.info("Generating Summarization ...")
-  summary = generate_summarization(chunks,summarizer)
+  for i,f in enumerate(files):
+    logger.info("Preprocessing Paper ...")
+    paragraphs,original_text_length = preprocess_text(f)
+    # print(paragraphs)
 
-  summary = '\n'.join(summary)
-  print(summary)
-  print("summary word count:",len(summary))
+    logger.info("Generating Chunks ...")
+    chunks = generate_chunks(paragraphs,tokenizer)
 
-  with open(f'{filename[:-4]}.txt','w',encoding='utf-8') as f:
-      f.write(summary)
+    logger.info("Generating Summarization ...")
+    summary = generate_summarization(chunks,summarizer)
 
-  return_summary = f'paper word count: {original_text_length}\n\n{summary}\n\nsummary word count: {len(summary)}'
-  return return_summary
+    summary = '\n\n'.join(summary)
+    print(summary)
+    print("summary word count:",len(summary))
 
+    summary_data[papers[i]] = mapper[papers[i]]
+    summary_data[papers[i]]['summary'] = summary
+    summary_data[papers[i]]['paper_char_count'] = original_text_length
+    summary_data[papers[i]]['summary_char_count'] = len(summary)
+  
+  with open('./summary_data_ready.json','w') as f:
+    json.dump(summary_data,f)
 
 if __name__ == '__main__':
-    import os
     
     files = [f for f in os.listdir() if f.endswith('.pdf')]
     
