@@ -7,13 +7,7 @@ import re
 import os
 import json
 
-def download(url, file_name):
-    with open(file_name, "wb") as file:   # open in binary mode
-        response = get(url)               # get request
-        file.write(response.content)      # write to file
-
-def get_top_10_papers(fields):
-    pubs = {
+pubs = {
             'cs.ai': ['nips','ieee','eccv','cvpr','iccv','aaai','icml','aamas','cibb','ecai','ecml pkdd','iclr','ijcai','iswc','neurlps','elsevier'],
             'cs.db': ['sigkdd','sigmod','cikm','acm','ieee','elsevier','cidr','ecir','ecis','icdt','icis','iswc','jcdl','kdd','pods','sigir','vldb'],
             'cs.os': ['atc','usenix','acm','middleware','sosp','systor','sosp','osdi','eurosys','hotos','apsys','sac','ieee','springer'],
@@ -24,8 +18,18 @@ def get_top_10_papers(fields):
             'cs.ds': ['esa','soda','acm','siam','swat','wads','waoa','ccc','fct','focs','ieee','icalp','isaac','mfcs','stacs','stoc','wollic'],
             'cs.cr': ['dsn','usenix','acns','asiacrypt','ches','crypto','eurocrypt','fse','pkc','rsa','tcc','ieee','elsevier','acm','springer','ndss'],
             'cs.cl': ['acl','emnlp','naacl','coling','tsd','cicling','ieee','interspeech','eacl','asru','acm','elsevier','springer']
-            }
-    #fields = ['cs.ai','cs.os','cs.db']
+        }
+
+def download(url, file_name):
+    with open(file_name, "wb") as file:   # open in binary mode
+        response = get(url)               # get request
+        file.write(response.content)      # write to file
+
+def get_random_papers():
+    return get_top_10_papers(list(pubs.keys()))
+
+def get_top_10_papers(fields):
+    
     def get_papers(fields,size):
         URL = f"https://arxiv.org/search/advanced"
         param = {
