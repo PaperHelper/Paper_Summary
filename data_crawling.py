@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import re
 import os
 import json
+import tqdm
 
 pubs = {
             'cs.ai': ['nips','ieee','eccv','cvpr','iccv','aaai','icml','aamas','cibb','ecai','ecml pkdd','iclr','ijcai','iswc','neurlps','elsevier'],
@@ -17,7 +18,8 @@ pubs = {
             'cs.pl': ['ecoop','esop','acm','sigplan','icfp','iclp','oopsla','popl','pldi','elsevier'],
             'cs.ds': ['esa','soda','acm','siam','swat','wads','waoa','ccc','fct','focs','ieee','icalp','isaac','mfcs','stacs','stoc','wollic'],
             'cs.cr': ['dsn','usenix','acns','asiacrypt','ches','crypto','eurocrypt','fse','pkc','rsa','tcc','ieee','elsevier','acm','springer','ndss'],
-            'cs.cl': ['acl','emnlp','naacl','coling','tsd','cicling','ieee','interspeech','eacl','asru','acm','elsevier','springer']
+            'cs.cl': ['acl','emnlp','naacl','coling','tsd','cicling','ieee','interspeech','eacl','asru','acm','elsevier','springer'],
+            'cs': ['acm','ieee','iclr','elsevier','springer']
         }
 
 def download(url, file_name):
@@ -26,7 +28,7 @@ def download(url, file_name):
         file.write(response.content)      # write to file
 
 def get_random_papers():
-    return get_top_10_papers(list(pubs.keys()))
+    return get_top_10_papers(['cs'])
 
 def get_top_10_papers(fields):
     
@@ -65,15 +67,18 @@ def get_top_10_papers(fields):
         titles = [t.text.strip() for t in soup.find_all(attrs={'class':'title is-5 mathjax'})]
         authors = [[author.text.strip() for author in a.find_all(name='a')] for a in soup.find_all(attrs={'class':'authors'})]
         comments = soup.find_all(attrs={'class':'has-text-grey-dark mathjax'})
+        tags = [t.text.strip().split('\n') for t in soup.find_all(attrs={'class':'tags is-inline-block'})]
 
         mapper = dict()
 
         for i in range(size):
             mapper[codes[i]] = {
                     'title':titles[i],
-                    'authors':', '.join(authors[i]),
+                    'authors':authors[i],
                     'publication':comments[i].text.strip(),
-                    'year':'20'+codes[i][:2]
+                    'year':'20'+codes[i][:2],
+                    'tags':tags[i],
+                    'pdf':'https://arxiv.org/pdf/'+codes[i]+'.pdf'
                     }
 
         return mapper
@@ -103,20 +108,14 @@ def get_top_10_papers(fields):
 
 def check_served(mapper):
     if not os.path.exists('./served_papers_list.txt'):
-        with open('./served_papers_list.txt','w') as f:
-            f.write('\n'.join(list(mapper.keys())[:10]))
-            f.write('\n')
-            return list(mapper.keys())[:10]
+        return list(mapper.keys())[:10]
 
     with open('./served_papers_list.txt','r') as f:
         served_codes = f.read().split('\n')
 
     new_codes = [c for c in mapper.keys() if c not in served_codes]
     if len(new_codes) >= 10:
-        with open('./served_papers_list.txt','a') as f:
-            f.write('\n'.join(new_codes[:10]))
-            f.write('\n')
-            return new_codes[:10]
+        return new_codes[:10]
     else:
         return -1
 
@@ -124,7 +123,9 @@ def get_files(papers):
     if not os.path.exists('./data/'):
         os.mkdir('./data/')
     for p in papers:
-        download(f'https://arxiv.org/pdf/{p}.pdf','./data/{p}.pdf')
+        download(f'https://arxiv.org/pdf/{p}.pdf',f'./data/{p}.pdf')
+        print(f'{p}.pdf download completed.')
 
 if __name__ == '__main__':
-    get_top_10_papers(['cs.cr'])
+    papers = get_top_10_papers(['cs.cr'])
+    get_files(papers)

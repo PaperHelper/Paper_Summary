@@ -24,7 +24,7 @@ from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser
 
 import nltk
-nltk.download('punkt')
+# nltk.download('punkt')
 
 import logging
 from tqdm import tqdm
@@ -183,7 +183,7 @@ def main(papers):
 
 if __name__ == '__main__':
     
-    files = [f for f in os.listdir() if f.endswith('.pdf')]
+    files = [f for f in os.listdir('./data/') if f.endswith('.pdf')]
     
     for f in files:
         main(f)

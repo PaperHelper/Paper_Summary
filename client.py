@@ -14,8 +14,9 @@ socket = context.socket(zmq.REQ)
 socket.connect("tcp://163.239.28.25:5000")
 
 print(f"Sending request …")
-socket.send(b"Hello")
+socket.send_string("")
 
 #  Get the reply.
-message = str(socket.recv(),'utf-8')
-print(f'{message}')
+while True:
+    message = socket.recv()
+    print(message)
